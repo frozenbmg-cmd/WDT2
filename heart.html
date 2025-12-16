@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Heart Tracker</title>
+
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+
+<style>
+body { margin:0; padding:20px; font-family:Arial; background:#121212; color:#fff; }
+.container { max-width: 420px; margin: 0 auto; padding-bottom: 80px; }
+.back-btn {
+    position:absolute; top:15px; left:15px;
+    background:#1E1E1E; padding:8px 14px; border-radius:14px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.6);
+    text-decoration:none; color:#fff; font-size:14px;
+}
+h1 { text-align:center; color:#FF453A; margin-top:60px; }
+.box {
+    background:#1E1E1E; padding:20px; border-radius:18px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.6); margin-top:20px;
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 15px;
+}
+.big { font-size:42px; font-weight:bold; text-align:center; color:#FF453A; }
+.metric {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 15px;
+    border-radius: 12px;
+    text-align: center;
+}
+.metric h4 { margin: 0 0 5px 0; font-size: 14px; color: rgba(255, 255, 255, 0.6); }
+.metric p { margin: 0; font-size: 24px; font-weight: bold; }
+
+.nav {
+    position:fixed; bottom:0; left:0; right:0; height:65px;
+    background:#1E1E1E; display:flex; justify-content:space-around; align-items:center;
+    box-shadow:0 -2px 15px rgba(0,0,0,0.6);
+    border-top-left-radius: 15px;
+    border-top-right-radius: 15px;
+}
+.nav a {
+    text-decoration:none; color:#fff; font-size:14px; text-align:center;
+    flex-grow: 1;
+}
+.nav a:hover {
+    background: rgba(255, 255, 255, 0.05);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.nav-icon { font-size:22px; display:block; margin-bottom:5px; }
+.active-nav { color: #FF453A !important; }
+
+.chart-container {
+    margin-top: 30px;
+    background: #1E1E1E;
+    padding: 15px;
+    border-radius: 18px;
+    box-shadow:0 6px 16px rgba(0,0,0,0.6);
+}
+</style>
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <a class="back-btn" href="index.html">← Back</a>
+
+    <h1>Heart Rate</h1>
+
+    <div class="box">
+        <div class="big" id="currentBPM">85</div>
+        <div class="metric">
+            <h4>Resting</h4>
+            <p id="restingBPM">58</p>
+        </div>
+        <div class="metric">
+            <h4>Avg. Max</h4>
+            <p id="avgMaxBPM">145</p>
+        </div>
+        <div class="metric">
+            <h4>Yesterday</h4>
+            <p id="yesterdayBPM">62</p>
+        </div>
+    </div>
+
+    <div class="chart-container">
+        <canvas id="heartRateChart"></canvas>
+    </div>
+
+</div>
+
+<div class="nav">
+    <a href="index.html"><span class="nav-icon">🏠</span>Home</a>
+    <a href="heart.html" class="active-nav"><span class="nav-icon">❤️</span>Heart</a>
+    <a href="workouts.html"><span class="nav-icon">💪</span>Workouts</a>
+</div>
+
+<script>
+// Sample Data
+const heartRateData = {
+    labels: ['8am', '10am', '12pm', '2pm', '4pm', '6pm', '8pm'],
+    data: [70, 85, 95, 80, 75, 68, 65]
+};
+
+function renderChart() {
+    const ctx = document.getElementById('heartRateChart').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: heartRateData.labels,
+            datasets: [{
+                label: 'Heart Rate (BPM)',
+                data: heartRateData.data,
+                borderColor: '#FF453A',
+                backgroundColor: 'rgba(255, 69, 58, 0.2)',
+                borderWidth: 2,
+                tension: 0.4,
+                fill: true,
+                pointRadius: 4,
+                pointBackgroundColor: '#FF453A',
+                pointBorderColor: '#fff',
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: true,
+                    text: 'Today\'s Heart Rate Trend',
+                    color: '#fff'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: false,
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ccc'
+                    }
+                },
+                x: {
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#ccc'
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Add a simple way to make the chart container height dynamic
+document.addEventListener('DOMContentLoaded', () => {
+    const chartContainer = document.querySelector('.chart-container');
+    chartContainer.style.height = '300px'; // Set a fixed height for mobile optimization
+    renderChart();
+});
+</script>
+</body>
+</html>

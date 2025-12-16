@@ -1,0 +1,110 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Fitness Dashboard</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+body { margin: 0; font-family: Arial, sans-serif; background: linear-gradient(180deg,#121212,#1E1E1E); color:#fff; }
+.container { width: 92%; max-width:420px; margin: 80px auto 20px; background:#1E1E1E; padding:20px; border-radius:22px; box-shadow:0 8px 25px rgba(0,0,0,0.6); text-align:center; }
+h2 { margin:0; }
+.rings { position: relative; width: 200px; height: 200px; margin: 30px auto; }
+.rings canvas { position:absolute; top:0; left:0; right:0; bottom:0; margin:auto; }
+.center-text { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); font-size:18px; font-weight:800; color:#fff; text-shadow:0 2px 5px rgba(0,0,0,0.5); }
+.stats { display:grid; grid-template-columns:1fr; gap:12px; margin-top:25px; text-align:left; }
+.stat { display:flex; justify-content:space-between; padding:10px 15px; background:rgba(255,255,255,0.05); border-radius:12px; font-size:16px; font-weight:600; }
+.stat span:first-child { color: rgba(255,255,255,0.7); }
+.nav { position: fixed; bottom:0; left:0; right:0; height:65px; background:#1E1E1E; display:flex; justify-content:space-around; align-items:center; box-shadow:0 -2px 15px rgba(0,0,0,0.6); border-top-left-radius:15px; border-top-right-radius:15px; }
+.nav a { text-decoration:none; color:#fff; font-size:14px; text-align:center; flex-grow:1; }
+.nav a:hover { background: rgba(255,255,255,0.05); height:100%; display:flex; flex-direction:column; justify-content:center; }
+.nav-icon { font-size:22px; display:block; margin-bottom:5px; }
+.small-note { font-size:12px; color:rgba(255,255,255,0.6); margin-top:8px; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h2>Activity</h2>
+    <div class="rings" aria-hidden="true">
+        <canvas id="ringCalorie" width="200" height="200" style="z-index:3;"></canvas>
+        <canvas id="ringExercise" width="160" height="160" style="z-index:2;"></canvas>
+        <canvas id="ringStand" width="120" height="120" style="z-index:1;"></canvas>
+        <div class="center-text" id="centerText">75%</div>
+    </div>
+
+    <div class="stats">
+        <div class="stat"><span>Move</span><span id="moveStat">450 / 600 kcal</span></div>
+        <div class="stat"><span>Exercise</span><span id="exerciseStat">22 / 30 min</span></div>
+        <div class="stat"><span>Stand</span><span id="standStat">10 / 12 hr</span></div>
+
+        <a href="body.html" class="stat" style="background: rgba(124,58,237,0.12); color: #c4b5fd;"><span>Body Metrics</span><span style="font-weight:800;">→</span></a>
+        <a href="diet.html" class="stat" style="background: rgba(239,68,68,0.12); color: #fecaca;"><span>Diet Tracker</span><span style="font-weight:800;">→</span></a>
+    </div>
+    <div class="small-note">Tip: Open the app full screen or install as a PWA for best experience.</div>
+</div>
+
+<div class="nav">
+    <a href="index.html"><span class="nav-icon">🏠</span>Home</a>
+    <a href="heart.html"><span class="nav-icon">❤️</span>Heart</a>
+    <a href="workouts.html"><span class="nav-icon">💪</span>Workouts</a>
+</div>
+
+<script>
+// Draw stacked rings with respectful spacing so center text doesn't overlap
+function drawRing(canvas, progress, color, lineWidth) {
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const w = canvas.width;
+    const h = canvas.height;
+    const center = {x: w/2, y: h/2};
+    const radius = Math.min(w,h)/2 - lineWidth;
+    ctx.clearRect(0,0,w,h);
+    // background ring
+    ctx.beginPath();
+    ctx.lineWidth = lineWidth;
+    ctx.strokeStyle = '#222';
+    ctx.arc(center.x, center.y, radius, 0, Math.PI*2);
+    ctx.stroke();
+    // progress arc
+    const start = -Math.PI/2;
+    const end = start + progress * 2 * Math.PI;
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+    ctx.arc(center.x, center.y, radius, start, end);
+    ctx.stroke();
+}
+
+function updateRings() {
+    const calorieProgress = 0.75;
+    const exerciseProgress = 0.733;
+    const standProgress = 0.833;
+
+    const ringCalorie = document.getElementById('ringCalorie');
+    const ringExercise = document.getElementById('ringExercise');
+    const ringStand = document.getElementById('ringStand');
+
+    // Draw with different widths for clear separation
+    drawRing(ringCalorie, calorieProgress, '#0A84FF', 12);
+    drawRing(ringExercise, exerciseProgress, '#32D74B', 10);
+    drawRing(ringStand, standProgress, '#FF453A', 8);
+
+    document.getElementById('centerText').innerText = Math.round(calorieProgress*100) + '%';
+    document.getElementById('moveStat').innerText = '450 / 600 kcal';
+    document.getElementById('exerciseStat').innerText = '22 / 30 min';
+    document.getElementById('standStat').innerText = '10 / 12 hr';
+}
+
+// Service worker registration (if available)
+if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+document.addEventListener('DOMContentLoaded', updateRings);
+</script>
+</body>
+</html>

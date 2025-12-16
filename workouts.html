@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Workouts</title>
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+body { margin:0; padding:20px; font-family:Arial; background:#121212; color:#fff; }
+.container { max-width: 720px; margin: 0 auto; padding-bottom: 80px; }
+.back-btn { position:absolute; top:15px; left:15px; background:#1E1E1E; padding:8px 14px; border-radius:14px; box-shadow:0 3px 10px rgba(0,0,0,0.6); text-decoration:none; color:#fff; font-size:14px; }
+h1 { text-align:center; color:#32D74B; margin-top:60px; }
+.controls { display:flex; gap:10px; margin:10px 0 20px; align-items:center; }
+.controls input[type="text"], .controls input[type="time"], .controls input[type="number"] { padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.06); background:rgba(255,255,255,0.02); color:#fff; }
+.btn { padding:10px 12px; border-radius:8px; border:none; background:#32D74B; color:#000; font-weight:700; cursor:pointer; }
+.workout { background:#1E1E1E; padding:18px; border-radius:20px; margin:15px 0; box-shadow:0 6px 16px rgba(0,0,0,0.6); transition: transform 0.2s; display:flex; justify-content:space-between; align-items:center; }
+.workout:hover { transform: translateY(-2px); }
+.meta { color:#ccc; font-size:13px; }
+.list { margin-top:16px; }
+.nav { position:fixed; bottom:0; left:0; right:0; height:65px; background:#1E1E1E; display:flex; justify-content:space-around; align-items:center; box-shadow:0 -2px 15px rgba(0,0,0,0.6); border-top-left-radius: 15px; border-top-right-radius: 15px; }
+.nav a { text-decoration:none; color:#fff; font-size:14px; text-align:center; flex-grow:1; }
+</style>
+</head>
+<body>
+
+<div class="container">
+    <a class="back-btn" href="index.html">← Back</a>
+    <h1>Workouts</h1>
+
+    <div class="controls">
+        <input id="search" type="text" placeholder="Search your workout (eg. cycling, squat, yoga)..." style="flex:1" />
+        <button class="btn" id="clearBtn">Clear</button>
+    </div>
+
+    <div style="display:flex; gap:10px; align-items:center;">
+        <input id="newName" type="text" placeholder="Workout name (e.g. Cycling)" style="flex:1">
+        <input id="newDuration" type="number" placeholder="Duration (min)" style="width:150px">
+        <input id="newTime" type="time" style="width:120px">
+        <button class="btn" id="addBtn">Add</button>
+    </div>
+
+    <div class="list" id="workoutList"></div>
+</div>
+
+<div class="nav">
+    <a href="index.html">🏠 Home</a>
+    <a href="heart.html">❤️ Heart</a>
+    <a href="workouts.html">💪 Workouts</a>
+</div>
+
+<script>
+// Preloaded workout database (searchable)
+const WORKOUT_DB = [
+  'Cycling','Running','Walking','Swimming','Yoga','Pilates','Squat','Bench Press','Deadlift','Rowing',
+  'Elliptical','Hiking','Stair Climber','Jump Rope','Burpees','Push Ups','Pull Ups','Lunges','Plank','HIIT',
+  'Spin Class','CrossFit','Boxing','Kickboxing','TRX','Stretching','Core Training','Dance','Zumba','Kettlebell'
+];
+
+const STORAGE_KEY = 'fitness_workouts_v1';
+let workouts = [];
+
+// load and save
+function load(){ const s = localStorage.getItem(STORAGE_KEY); if(s) workouts = JSON.parse(s); else { // seed
+    workouts = [
+      {id:1,name:'Cycling',duration:32,time:'07:30',status:'Completed',ts:Date.now()-3600*1000},
+      {id:2,name:'Running',duration:45,time:'18:00',status:'Completed',ts:Date.now()-86400*1000},
+      {id:3,name:'Strength Training',duration:60,time:'12:00',status:'Completed',ts:Date.now()-2*86400*1000}
+    ]; save();
+  }}
+function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(workouts)); }
+
+function render(list){
+  const container = document.getElementById('workoutList');
+  container.innerHTML='';
+  if(list.length===0){ container.innerHTML = '<p style="color:rgba(255,255,255,0.6)">No workouts found.</p>'; return; }
+  list.forEach(w=>{
+    const el = document.createElement('div');
+    el.className = 'workout';
+    el.innerHTML = `<div><h3 style="margin:0;">${w.name}</h3><div class="meta">${w.duration} min • ${w.time ? w.time : '—'} • ${new Date(w.ts).toLocaleDateString()}</div></div><div><button style="background:none;border:1px solid rgba(255,255,255,0.06);color:#fff;padding:8px 10px;border-radius:8px;cursor:pointer" onclick="remove(${w.id})">Delete</button></div>`;
+    container.appendChild(el);
+  });
+}
+
+function addWorkout(){
+  const name = document.getElementById('newName').value.trim();
+  const duration = parseInt(document.getElementById('newDuration').value) || 0;
+  const time = document.getElementById('newTime').value;
+  if(!name) return alert('Enter workout name');
+  const id = workouts.length ? Math.max(...workouts.map(w=>w.id))+1 : 1;
+  workouts.unshift({id,name,duration,time,ts:Date.now()});
+  save(); render(workouts);
+  document.getElementById('newName').value = ''; document.getElementById('newDuration').value=''; document.getElementById('newTime').value='';
+}
+
+function remove(id){ workouts = workouts.filter(w=>w.id!==id); save(); render(workouts); }
+
+// Search logic: search in WORKOUT_DB for suggestions and filter saved workouts
+function search(q){
+  q = (q||'').toLowerCase().trim();
+  if(!q) { render(workouts); return; }
+  const suggestions = WORKOUT_DB.filter(x=> x.toLowerCase().includes(q));
+  // also filter user's workouts by name match
+  const matched = workouts.filter(w=> w.name.toLowerCase().includes(q));
+  // Combine: show user's matched first then suggestions that aren't already in list
+  const combined = [...matched];
+  suggestions.forEach(s => { if(!combined.find(c=> c.name.toLowerCase()===s.toLowerCase())) combined.push({id:'suggest-'+s,name:s,duration:'—',time:'—',ts:Date.now()}); });
+  render(combined);
+}
+
+// Bind UI
+document.getElementById('addBtn').addEventListener('click', addWorkout);
+document.getElementById('clearBtn').addEventListener('click', ()=>{ document.getElementById('search').value=''; render(workouts); });
+document.getElementById('search').addEventListener('input', (e)=> search(e.target.value));
+document.getElementById('search').addEventListener('keypress', (e)=>{ if(e.key==='Enter'){ e.preventDefault(); search(e.target.value); } });
+
+// service worker registration
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+
+// init
+load(); render(workouts);
+</script>
+</body>
+</html>

@@ -1,0 +1,555 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fitness App — Diet</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+  <style>
+    :root{
+      --bg: linear-gradient(180deg,#071021,#071126);
+      --card: rgba(255,255,255,0.08);
+      --muted: rgba(255,255,255,0.85);
+      --accent: #ef4444;
+      --success: #32D74B;
+      font-family:"Inter",system-ui,-apple-system,"Segoe UI",Roboto;
+    }
+    body{margin:0;min-height:100vh;background:var(--bg);color:var(--muted);padding:18px}
+    .wrap{max-width:1100px;margin:0 auto;display:grid;grid-template-columns:1fr 360px;gap:18px; padding-bottom: 80px;}
+    header{display:flex;align-items:center;justify-content:space-between;padding:10px 0;grid-column:1/3;border-bottom:1px solid rgba(255,255,255,0.1); margin-bottom: 15px;}
+    h1{font-size:24px;font-weight:800;color:#fff;margin:0}
+    .card{background:var(--card);padding:18px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+
+    /* Profile Sidebar */
+    .sidebar{grid-column:2/3;display:flex;flex-direction:column;gap:18px}
+    .profile-form label{display:block;margin-bottom:6px;font-size:14px;font-weight:600}
+    .profile-form input,.profile-form select{width:100%;padding:10px;margin-bottom:12px;border:1px solid rgba(255,255,255,0.2);border-radius:8px;background:rgba(255,255,255,0.05);color:var(--muted);box-sizing:border-box}
+    .profile-form button{width:100%;padding:12px;border:none;border-radius:8px;background:var(--accent);color:#fff;font-weight:700;cursor:pointer;transition:background 0.2s}
+    .profile-form button:hover{background:darken(var(--accent),10%)}
+
+    /* Targets */
+    #calorieTargets div{padding:8px 0;border-bottom:1px solid rgba(255,255,255,0.05);font-size:14px}
+    #calorieTargets div strong{color:#fff;font-weight:700;margin-right:8px}
+
+    /* Meal List */
+    .meal-list{grid-column:1/2;display:flex;flex-direction:column;gap:18px}
+    .meal{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid rgba(255,255,255,0.1)}
+    .meal-info{flex-grow:1}
+    .meal-info h3{margin:0;font-size:18px;color:#fff}
+    .meal-info p{margin:4px 0 0;font-size:12px;color:rgba(255,255,255,0.6)}
+    .meal-macros{font-size:14px;text-align:right}
+    .meal-macros span{margin-left:12px;font-weight:600}
+    .meal-macros .kcal{color:var(--accent)}
+    .meal-macros .pro{color:#34d399}
+    .meal-macros .carb{color:#60a5fa}
+    .meal-macros .fat{color:#fbbf24}
+    .add-meal-btn{padding:10px 15px;background:var(--success);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:600;margin-top:15px;transition:background 0.2s}
+    .add-meal-btn:hover{background:darken(var(--success),10%)}
+
+    /* Charts */
+    .chart-container{margin-top:10px}
+
+    /* Diet Tip */
+    #dietTip{border-left:3px solid var(--accent);padding-left:15px;margin-top:15px;font-size:14px;color:rgba(255,255,255,0.7)}
+    #dietTip strong{color:#fff;font-weight:600}
+
+    /* Nav */
+    .nav {
+        position:fixed; bottom:0; left:0; right:0; height:65px;
+        background:#1E1E1E; display:flex; justify-content:space-around; align-items:center;
+        box-shadow:0 -2px 15px rgba(0,0,0,0.6);
+        border-top-left-radius: 15px;
+        border-top-right-radius: 15px;
+    }
+    .nav a {
+        text-decoration:none; color:#fff; font-size:14px; text-align:center;
+        flex-grow: 1;
+    }
+    .nav a:hover {
+        background: rgba(255, 255, 255, 0.05);
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    .nav-icon { font-size:22px; display:block; margin-bottom:5px; }
+    .active-nav { color: var(--accent) !important; }
+
+    /* Mobile Adjustments */
+    @media (max-width: 768px) {
+        .wrap {
+            grid-template-columns: 1fr;
+            padding: 10px;
+            padding-bottom: 80px;
+        }
+        .sidebar {
+            grid-row: 1; /* Move sidebar to top on mobile */
+            grid-column: 1;
+        }
+        header {
+            grid-column: 1;
+        }
+        .meal-list {
+            grid-column: 1;
+        }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Diet Tracker</h1>
+    <a href="index.html" class="back-btn" style="color: #fff; text-decoration: none; border: 1px solid rgba(255,255,255,0.2); padding: 6px 12px; border-radius: 6px;">← Dashboard</a>
+  </header>
+
+  <div class="meal-list">
+    <div class="card">
+        <h2>Today's Intake Summary</h2>
+        <div class="chart-container" style="height: 250px;">
+          <canvas id="macrosChart"></canvas>
+        </div>
+        <div id="dietTip"></div>
+    </div>
+
+    <div class="card">
+      <h2>Logged Meals</h2>
+      <div id="mealListContainer">
+        <!-- Meals will be rendered here -->
+      </div>
+      <button class="add-meal-btn" onclick="openAddMealModal()">+ Add Meal</button>
+    </div>
+  </div>
+
+  <div class="sidebar">
+    <div class="card">
+      <h2>Calorie & Macro Targets</h2>
+      <div id="calorieTargets">
+        <!-- Targets will be rendered here -->
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Profile & Goal</h2>
+      <form id="profileForm" class="profile-form" onsubmit="calculateTargets(event)">
+        <label for="age">Age (years)</label>
+        <input type="number" id="age" required min="18">
+
+        <label for="sex">Sex</label>
+        <select id="sex" required>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+
+        <label for="weight">Weight (kg)</label>
+        <input type="number" id="weight" required min="30" step="0.1">
+
+        <label for="height">Height (cm)</label>
+        <input type="number" id="height" required min="100">
+
+        <label for="activity">Activity Level</label>
+        <select id="activity" required>
+          <option value="1.2">Sedentary (little or no exercise)</option>
+          <option value="1.375">Lightly Active (light exercise/sports 1-3 days/week)</option>
+          <option value="1.55">Moderately Active (moderate exercise/sports 3-5 days/week)</option>
+          <option value="1.725">Very Active (hard exercise/sports 6-7 days a week)</option>
+          <option value="1.9">Extremely Active (hard daily exercise/physical job)</option>
+        </select>
+
+        <label for="goal">Goal</label>
+        <select id="goal" required>
+          <option value="maintain">Maintain Weight</option>
+          <option value="mild_loss">Mild Weight Loss (-250 kcal/day)</option>
+          <option value="loss">Weight Loss (-500 kcal/day)</option>
+          <option value="fast_loss">Fast Weight Loss (-750 kcal/day)</option>
+          <option value="mild_gain">Mild Weight Gain (+250 kcal/day)</option>
+          <option value="gain">Weight Gain (+500 kcal/day)</option>
+        </select>
+
+        <button type="submit">Calculate Targets</button>
+      </form>
+    </div>
+
+    <div class="card">
+        <h2>State Debug</h2>
+        <pre id="dietDump" style="white-space: pre-wrap; word-break: break-all; font-size: 10px; color: rgba(255,255,255,0.5);"></pre>
+    </div>
+  </div>
+</div>
+
+<!-- Simple Modal for Adding Meal -->
+<div id="addMealModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); z-index:100; justify-content:center; align-items:center;">
+    <div style="background:#1E1E1E; padding:25px; border-radius:12px; width:90%; max-width:400px; box-shadow:0 8px 25px rgba(0,0,0,0.6);">
+        <h3 style="margin-top:0; color: #fff;">Add New Meal</h3>
+        <form id="addMealForm" onsubmit="logMeal(event)">
+            <label for="mealName">Name</label>
+            <input type="text" id="mealName" required>
+
+            <label for="mealKcal">Calories (kcal)</label>
+            <input type="number" id="mealKcal" required min="1">
+
+            <label for="mealProtein">Protein (g)</label>
+            <input type="number" id="mealProtein" required min="0">
+
+            <label for="mealCarbs">Carbs (g)</label>
+            <input type="number" id="mealCarbs" required min="0">
+
+            <label for="mealFat">Fat (g)</label>
+            <input type="number" id="mealFat" required min="0">
+
+            <button type="submit" style="background: var(--success); margin-top: 15px;">Log Meal</button>
+            <button type="button" onclick="closeAddMealModal()" style="background: #333; margin-top: 10px;">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<div class="nav">
+    <a href="index.html"><span class="nav-icon">🏠</span>Home</a>
+    <a href="heart.html"><span class="nav-icon">❤️</span>Heart</a>
+    <a href="workouts.html"><span class="nav-icon">💪</span>Workouts</a>
+</div>
+
+<script>
+/* Global State and Persistence */
+let state = {
+  profile: {},
+  targets: null,
+  meals: [],
+};
+let chartInstance = null;
+const STORAGE_KEY = 'fitness_diet_state';
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function load() {
+  const savedState = localStorage.getItem(STORAGE_KEY);
+  if (savedState) {
+    state = JSON.parse(savedState);
+  }
+}
+
+/* Modal Controls */
+function openAddMealModal() {
+    document.getElementById('addMealModal').style.display = 'flex';
+    document.getElementById('addMealForm').reset();
+}
+
+function closeAddMealModal() {
+    document.getElementById('addMealModal').style.display = 'none';
+}
+
+/* BMR/TDEE Calculation (Revised Harris-Benedict) */
+function calculateBMR(profile) {
+  const { age, sex, weight, height } = profile;
+  if (!age || !weight || !height) return 0;
+  if (sex === 'male') {
+    // BMR = 88.362 + (13.397 x weight_kg) + (4.799 x height_cm) - (5.677 x age_y)
+    return Math.round(88.362 + (13.397 * weight) + (4.799 * height) - (5.677 * age));
+  } else {
+    // BMR = 447.593 + (9.247 x weight_kg) + (3.098 x height_cm) - (4.330 x age_y)
+    return Math.round(447.593 + (9.247 * weight) + (3.098 * height) - (4.330 * age));
+  }
+}
+
+function calculateTargets(e) {
+  e.preventDefault();
+  const age = parseInt(document.getElementById('age').value);
+  const sex = document.getElementById('sex').value;
+  const weight = parseFloat(document.getElementById('weight').value);
+  const height = parseFloat(document.getElementById('height').value);
+  const activity = parseFloat(document.getElementById('activity').value);
+  const goal = document.getElementById('goal').value;
+
+  state.profile = { age, sex, weight, height, activity, goal };
+
+  const bmr = calculateBMR(state.profile);
+  const tdee = Math.round(bmr * activity);
+
+  let adjustment = 0;
+  switch (goal) {
+    case 'mild_loss': adjustment = -250; break;
+    case 'loss': adjustment = -500; break;
+    case 'fast_loss': adjustment = -750; break;
+    case 'mild_gain': adjustment = 250; break;
+    case 'gain': adjustment = 500; break;
+  }
+
+  const targetKcal = Math.max(1200, tdee + adjustment); // Safety minimum of 1200 kcal
+
+  // Macro calculation (simplified: 40% Carb, 30% Protein, 30% Fat)
+  // Protein: 4 kcal/g, Carbs: 4 kcal/g, Fat: 9 kcal/g
+  const proteinKcal = targetKcal * 0.30;
+  const carbsKcal = targetKcal * 0.40;
+  const fatKcal = targetKcal * 0.30;
+
+  const proteinG = Math.round(proteinKcal / 4);
+  const carbsG = Math.round(carbsKcal / 4);
+  const fatG = Math.round(fatKcal / 9);
+
+  state.targets = {
+    bmr,
+    tdee,
+    targetKcal,
+    proteinG,
+    carbsG,
+    fatG,
+    goal,
+  };
+
+  save();
+  syncUI();
+}
+
+/* Meal Logging */
+let mealIdCounter = 0;
+
+function logMeal(e) {
+  e.preventDefault();
+
+  const name = document.getElementById('mealName').value;
+  const kcal = parseInt(document.getElementById('mealKcal').value);
+  const protein = parseInt(document.getElementById('mealProtein').value);
+  const carbs = parseInt(document.getElementById('mealCarbs').value);
+  const fat = parseInt(document.getElementById('mealFat').value);
+
+  // Simple validation: check if macros match kcal roughly (Protein*4 + Carbs*4 + Fat*9)
+  const calculatedKcal = (protein * 4) + (carbs * 4) + (fat * 9);
+  if (Math.abs(calculatedKcal - kcal) > 50) {
+      // console.warn("Warning: Logged Kcal and Macro Kcal differ significantly.");
+      // We allow the user's kcal input to be the source of truth, but we could warn them.
+  }
+
+  mealIdCounter++;
+  const newMeal = {
+    id: mealIdCounter,
+    name,
+    kcal,
+    protein,
+    carbs,
+    fat,
+    ts: Date.now(),
+  };
+
+  state.meals.push(newMeal);
+
+  closeAddMealModal();
+  save();
+  syncUI();
+}
+
+function removeMeal(id) {
+    state.meals = state.meals.filter(meal => meal.id !== id);
+    save();
+    syncUI();
+}
+
+/* UI Rendering */
+function renderMeals() {
+  const container = document.getElementById('mealListContainer');
+  const today = new Date().toDateString();
+
+  // Filter meals for today (simple date comparison)
+  const todayMeals = state.meals.filter(meal => {
+    return new Date(meal.ts).toDateString() === today;
+  });
+
+  if (todayMeals.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:rgba(255,255,255,0.5); padding:10px;">No meals logged today.</p>';
+    return;
+  }
+
+  let html = '';
+  todayMeals.forEach(meal => {
+    html += `
+      <div class="meal">
+        <div class="meal-info">
+          <h3>${meal.name}</h3>
+          <p>${meal.kcal} kcal</p>
+        </div>
+        <div class="meal-macros">
+          <span class="pro">${meal.protein}g P</span>
+          <span class="carb">${meal.carbs}g C</span>
+          <span class="fat">${meal.fat}g F</span>
+        </div>
+        <button onclick="removeMeal(${meal.id})" style="margin-left: 15px; background: none; border: none; color: var(--accent); cursor: pointer; font-size: 16px;">&times;</button>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function renderTargets() {
+  const el = document.getElementById('calorieTargets');
+  const t = state.targets;
+  if (!t) { el.innerHTML = 'Enter profile and press Calculate.'; return; }
+
+  // Total macros consumed today
+  const today = new Date().toDateString();
+  const todayMeals = state.meals.filter(meal => new Date(meal.ts).toDateString() === today);
+  const consumed = todayMeals.reduce((acc, meal) => {
+    acc.kcal += meal.kcal;
+    acc.protein += meal.protein;
+    acc.carbs += meal.carbs;
+    acc.fat += meal.fat;
+    return acc;
+  }, { kcal: 0, protein: 0, carbs: 0, fat: 0 });
+
+  el.innerHTML = `
+    <div><strong>BMR:</strong> ${t.bmr} kcal/day</div>
+    <div><strong>TDEE:</strong> ${t.tdee} kcal/day</div>
+    <div style="padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.1);">
+        <strong style="font-size: 16px;">Target:</strong> ${t.targetKcal} kcal/day (${t.goal.replace('_', ' ')})
+    </div>
+    <div style="color: ${consumed.kcal > t.targetKcal ? 'var(--accent)' : 'var(--success)'};">
+        <strong style="color: #fff;">Consumed:</strong> ${consumed.kcal} kcal
+    </div>
+    <div>
+        <strong>Protein:</strong> ${consumed.protein} / ${t.proteinG} g
+        <span style="float: right; color: ${consumed.protein > t.proteinG ? 'var(--accent)' : 'var(--success)'};">${t.proteinG - consumed.protein}g left</span>
+    </div>
+    <div>
+        <strong>Carbs:</strong> ${consumed.carbs} / ${t.carbsG} g
+        <span style="float: right; color: ${consumed.carbs > t.carbsG ? 'var(--accent)' : 'var(--success)'};">${t.carbsG - consumed.carbs}g left</span>
+    </div>
+    <div>
+        <strong>Fat:</strong> ${consumed.fat} / ${t.fatG} g
+        <span style="float: right; color: ${consumed.fat > t.fatG ? 'var(--accent)' : 'var(--success)'};">${t.fatG - consumed.fat}g left</span>
+    </div>
+    `;
+}
+
+function renderMacrosChart() {
+  const t = state.targets;
+  if (!t) {
+    document.getElementById('macrosChart').innerHTML = 'Calculate targets first.';
+    return;
+  }
+
+  const today = new Date().toDateString();
+  const todayMeals = state.meals.filter(meal => new Date(meal.ts).toDateString() === today);
+  const consumed = todayMeals.reduce((acc, meal) => {
+    acc.protein += meal.protein * 4;
+    acc.carbs += meal.carbs * 4;
+    acc.fat += meal.fat * 9;
+    return acc;
+  }, { protein: 0, carbs: 0, fat: 0 });
+
+  const data = {
+    labels: ['Protein', 'Carbs', 'Fat'],
+    datasets: [{
+      data: [consumed.protein, consumed.carbs, consumed.fat],
+      backgroundColor: ['#34d399', '#60a5fa', '#fbbf24'],
+      hoverOffset: 4
+    }]
+  };
+
+  const ctx = document.getElementById('macrosChart').getContext('2d');
+
+  if (chartInstance) {
+    chartInstance.data = data;
+    chartInstance.update();
+    return;
+  }
+
+  chartInstance = new Chart(ctx, {
+    type: 'doughnut',
+    data: data,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          labels: {
+            color: 'var(--muted)',
+            font: {
+              size: 14
+            }
+          }
+        },
+        tooltip: {
+            callbacks: {
+                label: function(context) {
+                    let label = context.label || '';
+                    if (label) {
+                        label += ': ';
+                    }
+                    if (context.parsed !== null) {
+                        label += context.parsed + ' kcal';
+                    }
+                    return label;
+                }
+            }
+        }
+      }
+    }
+  });
+}
+
+function renderDietTip() {
+    const el = document.getElementById('dietTip');
+    const t = state.targets;
+    if (!t) {
+        el.innerHTML = 'Set your profile and calculate targets to get a personalized tip!';
+        return;
+    }
+
+    const today = new Date().toDateString();
+    const todayMeals = state.meals.filter(meal => new Date(meal.ts).toDateString() === today);
+    const consumed = todayMeals.reduce((acc, meal) => acc + meal.kcal, 0);
+
+    if (consumed < t.targetKcal * 0.5) {
+        el.innerHTML = '<strong>Focus on Fuel:</strong> You\'ve only consumed a small amount of your target. Remember to space out your meals to maintain energy!';
+    } else if (consumed > t.targetKcal * 1.1) {
+        el.innerHTML = '<strong>Mindful Eating:</strong> You have exceeded your daily calorie target. Consider tracking portion sizes more closely for your next meals.';
+    } else if (todayMeals.length < 2) {
+        el.innerHTML = '<strong>Consistency is Key:</strong> Try to log at least three meals today to get a full picture of your nutritional breakdown.';
+    } else if (todayMeals.length > 0) {
+        const proteinGrams = todayMeals.reduce((acc, meal) => acc + meal.protein, 0);
+        if (proteinGrams < t.proteinG * 0.7) {
+            el.innerHTML = '<strong>Boost Protein:</strong> Your protein intake seems a little low relative to your goal. Try adding lean meats, eggs, or legumes to your next meal!';
+        } else {
+            el.innerHTML = '<strong>Great Job!</strong> Your macro distribution looks good so far. Keep hydrating throughout the day!';
+        }
+    } else {
+         el.innerHTML = '<strong>Start Logging!</strong> Your personalized target is ready. Log your first meal to start tracking your progress!';
+    }
+}
+
+
+/* Sync UI from state */
+function syncUI(){
+  document.getElementById('age').value = state.profile.age || '';
+  document.getElementById('sex').value = state.profile.sex || 'male';
+  document.getElementById('activity').value = state.profile.activity || 1.375;
+  document.getElementById('weight').value = state.profile.weight || '';
+  document.getElementById('height').value = state.profile.height || '';
+  document.getElementById('goal').value = state.profile.goal || 'maintain';
+  document.getElementById('dietDump').innerText = JSON.stringify(state, null, 2);
+  renderMeals();
+  renderTargets();
+  renderMacrosChart();
+  renderDietTip();
+}
+
+/* Load on open and seed minor sample */
+load();
+if(!localStorage.getItem('diet_sample_loaded')){
+  mealIdCounter = 2; // Initialize counter for sample data
+  state.meals = [
+    {id:1,name:'Breakfast',kcal:420,protein:22,carbs:45,fat:12,ts:Date.now()-(3600*1000)},
+    {id:2,name:'Lunch',kcal:680,protein:40,carbs:70,fat:20,ts:Date.now()-(60*1000)},
+  ];
+  state.profile = { age: 30, sex: 'male', weight: 75, height: 175, activity: 1.55, goal: 'maintain' };
+  // Force a calculation of targets on sample load
+  calculateTargets({preventDefault: () => {}});
+
+  localStorage.setItem('diet_sample_loaded', 'true');
+}
+
+syncUI();
+</script>
+</body>
+</html>
